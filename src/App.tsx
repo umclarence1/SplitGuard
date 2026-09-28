@@ -67,6 +67,8 @@ export default function Home(){
   const input=useRef<HTMLInputElement>(null); const [report,setReport]=useState<Report|null>(saved.report); const [selectedFiles,setSelectedFiles]=useState<File[]>([]); const [job,setJob]=useState<ExperimentJob|null>(saved.job?{id:saved.job.id,owner_token:saved.job.owner_token,status:"resuming",message:"Reconnecting to your experiment…",progress:0}:null); const [phase,setPhase]=useState<"idle"|"scan"|"done">(saved.report?"done":"idle"); const [progress,setProgress]=useState(0); const [error,setError]=useState(""); const [filter,setFilter]=useState("All");
   const visible=useMemo(()=>report?.findings.filter(f=>filter==="All"||f.kind===filter)||[],[report,filter]);
   useEffect(()=>{if(report)requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:"instant"}))},[report]);
+  // Only id/owner_token are persisted, so status/progress changes shouldn't retrigger this.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{saveSession(report,job)},[report,job?.id,job?.owner_token]);
   async function scan(e:ChangeEvent<HTMLInputElement>){
     const files=[...(e.target.files||[])].filter(f=>IMAGE_TYPES.has(f.type)); if(!files.length){setError("Choose a folder containing JPG, PNG, WebP, GIF, or BMP images.");return} setSelectedFiles(files);setJob(null);
@@ -99,6 +101,8 @@ export default function Home(){
     const body=new FormData();body.append("dataset_name",report.name);body.append("epochs","5");selectedFiles.forEach(file=>{body.append("files",file,file.name);body.append("paths",(file as File&{webkitRelativePath?:string}).webkitRelativePath||file.name)});
     const request=new XMLHttpRequest();request.open("POST",`${API_URL}/api/experiments`);if(API_KEY)request.setRequestHeader("X-SplitGuard-Api-Key",API_KEY);request.upload.onprogress=(event)=>{if(event.lengthComputable){const value=Math.max(1,Math.min(7,Math.round(event.loaded/event.total*7)));setJob({id:"",status:"uploading",message:`Uploading dataset · ${Math.round(event.loaded/event.total*100)}%`,progress:value})}};request.onload=()=>{try{const payload=JSON.parse(request.responseText);if(request.status<200||request.status>=300)throw new Error(payload.detail||request.responseText);setJob(payload)}catch(err){setJob({id:"",status:"failed",message:err instanceof Error?err.message:"Could not start the experiment",progress:0})}};request.onerror=()=>setJob({id:"",status:"failed",message:"The experiment worker could not be reached. Check its URL and CORS settings.",progress:0});request.send(body);
   }
+  // Re-polling on every status/progress tick would restart the interval constantly;
+  // id/status/owner_token are the only fields that should restart it.
   useEffect(()=>{
     if(!job?.id||["complete","failed","cancelled"].includes(job.status))return;
     let failures=0;
@@ -114,6 +118,7 @@ export default function Home(){
     void tick();
     const timer=window.setInterval(tick,2500);
     return()=>window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   },[job?.id,job?.status,job?.owner_token]);
   function download(){if(!report)return;const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${report.name}-splitguard-report.json`;a.click();URL.revokeObjectURL(a.href)}
   async function cancelExperiment(){if(!job?.id)return;await fetch(`${API_URL}/api/experiments/${job.id}/cancel`,{method:"POST",headers:ownerHeaders(job)});setJob({...job,status:"cancelled",message:"Experiment cancelled",progress:0})}

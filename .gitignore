@@ -13,10 +13,9 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/.vinext/
-/out/
+# build output
+/dist/
+*.tsbuildinfo
 
 # misc
 .DS_Store
@@ -34,12 +33,10 @@ yarn-error.log*
 # vercel
 .vercel
 
-/dist/
-/.wrangler/
+# reference datasets used for local testing
 /outputs/
 /work/
 
 # worker runtime data: uploaded datasets, results and per-job owner tokens
 /jobs/
 .uvicorn.log
-*.tsbuildinfo
