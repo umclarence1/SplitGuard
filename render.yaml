@@ -12,7 +12,7 @@ services:
       - key: SPLITGUARD_API_KEY
         generateValue: true
       - key: SPLITGUARD_CORS_ORIGINS
-        value: http://localhost:5173,http://127.0.0.1:5173
+        value: https://split-guard-omega.vercel.app,http://localhost:5173,http://127.0.0.1:5173
       - key: SPLITGUARD_RETENTION_HOURS
         value: "24"
       - key: SPLITGUARD_MAX_FILES
