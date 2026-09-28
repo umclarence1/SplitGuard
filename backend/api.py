@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import UploadFile
 
 ROOT=Path(__file__).resolve().parents[1];JOBS=ROOT/"jobs";PYTHON=Path(sys.executable);MAX_FILES=int(os.getenv("SPLITGUARD_MAX_FILES","25000"));MAX_TOTAL=int(os.getenv("SPLITGUARD_MAX_UPLOAD_BYTES",str(20*1024**3)));RETENTION=int(os.getenv("SPLITGUARD_RETENTION_HOURS","24"));WORKERS=max(1,int(os.getenv("SPLITGUARD_WORKERS","1")))
+TRAIN_BATCH_SIZE=int(os.getenv("SPLITGUARD_TRAIN_BATCH_SIZE","32"));TRAIN_IMAGE_SIZE=int(os.getenv("SPLITGUARD_TRAIN_IMAGE_SIZE","160"))
 IMAGE_EXTENSIONS={".png",".jpg",".jpeg",".bmp",".gif",".tif",".tiff",".webp"}
 API_KEY=os.getenv("SPLITGUARD_API_KEY","").strip()
 def parse_origins(raw:str)->list[str]:return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
@@ -58,7 +59,7 @@ def run_job(job:str,epochs:int):
         write_state(job,status="cleaning",message="Removing training leakage while preserving the held-out test set",progress=35,audit=json.loads((audit/"summary.json").read_text(encoding="utf-8")))
         subprocess.run([str(PYTHON),str(ROOT/"backend/prepare_impact_datasets.py"),"--audit",str(audit),"--dataset",str(raw),"--output",str(prepared)],check=True,capture_output=True,text=True)
         if cancelled(job):return
-        write_state(job,status="training",message="Running three-seed controlled benchmark",progress=48);stream(job,[str(PYTHON),str(ROOT/"backend/run_impact_experiment.py"),"--baseline",str(prepared/"baseline_original"),"--cleaned",str(prepared/"cleaned"),"--output",str(result),"--epochs",str(epochs)],"training")
+        write_state(job,status="training",message="Running three-seed controlled benchmark",progress=48);stream(job,[str(PYTHON),str(ROOT/"backend/run_impact_experiment.py"),"--baseline",str(prepared/"baseline_original"),"--cleaned",str(prepared/"cleaned"),"--output",str(result),"--epochs",str(epochs),"--batch-size",str(TRAIN_BATCH_SIZE),"--image-size",str(TRAIN_IMAGE_SIZE)],"training")
         results=json.loads((result/"impact_results.json").read_text(encoding="utf-8"));write_state(job,status="complete",message="Measured benchmark accuracies are ready",progress=100,result=results,preparation=json.loads((prepared/"preparation_summary.json").read_text(encoding="utf-8")),completed_at=time.time())
     except subprocess.CalledProcessError as exc:
         raw=(exc.stderr or exc.stdout or str(exc)).strip().splitlines();message=raw[-1] if raw else "Dataset preparation failed"
