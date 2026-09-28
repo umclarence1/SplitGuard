@@ -38,3 +38,8 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# worker runtime data: uploaded datasets, results and per-job owner tokens
+/jobs/
+.uvicorn.log
+*.tsbuildinfo

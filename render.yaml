@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: splitguard-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install --extra-index-url https://download.pytorch.org/whl/cpu -r backend/requirements.txt
+    startCommand: uvicorn backend.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: SPLITGUARD_API_KEY
+        generateValue: true
+      - key: SPLITGUARD_CORS_ORIGINS
+        value: http://localhost:5173,http://127.0.0.1:5173
+      - key: SPLITGUARD_RETENTION_HOURS
+        value: "24"
+      - key: SPLITGUARD_MAX_FILES
+        value: "25000"
+      - key: SPLITGUARD_MAX_UPLOAD_BYTES
+        value: "21474836480"
+      - key: SPLITGUARD_WORKERS
+        value: "1"
